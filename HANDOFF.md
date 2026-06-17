@@ -6,13 +6,40 @@ Standalone, published npm package: a faithful **TypeScript port** of the Python
 can use OpenViking as a memory backend (retriever, store, agent tools, chat
 history, context middleware). Detached into its own GitHub repo.
 
-## Status: DONE and shipped
-- **npm**: `@grubgenie/openviking-memory-layer@0.1.0` — published, public.
+## Status: v0.2.0 committed + pushed — NOT yet on npm (blocked on OTP)
+- **npm**: latest published is still `@grubgenie/openviking-memory-layer@0.1.0`.
+  **0.2.0 publish is pending** — `npm publish` keeps failing with `EOTP` (2FA).
+  **To finish the release, run interactively:** `npm publish --otp=<6-digit-code>`
+  (build/prepublish already pass; only the OTP is missing). npm user: `hencydsouza24`.
   https://www.npmjs.com/package/@grubgenie/openviking-memory-layer
-- **GitHub**: https://github.com/hencydsouza24/openviking-memory-layer (public, `main`)
-- **Repo root**: `~/Desktop/cloned_repos/openviking-memory-layer` (standalone, own git, 1 commit)
-- Removed from the OpenViking parent repo (`packages/langchain-js` deleted; was never committed there).
-- Goldfish session memory: `~/Goldfish/work/openviking-memory-layer/goldfish/` (small/medium/large/inbox).
+- **GitHub**: https://github.com/hencydsouza24/openviking-memory-layer — `main` pushed
+  through `v0.2.0` (commit `1a141f4` feature + `9a2b787` version bump; tag `v0.2.0` pushed).
+- **Repo root**: `~/Desktop/cloned_repos/openviking-memory-layer` (standalone, own git).
+- `.graymatter/` is gitignored (tool artifact, not committed).
+
+## This session (the 0.2.0 changes)
+Goal was to make the package consumable by `grubgenie_api_refactor`
+(`src/modules/agents/agents.diner.ts` uses `OpenVikingStore` as `createAgent({ store })`
++ `createMemoryTools`). grubgenie was **read-only**; only this package changed.
+- **Parity-verified** the TS port vs Python examples: 4/5 deterministic examples emit
+  byte-identical output; middleware pair matches by source (Python middleware env lacked
+  full `langchain` pkg). Found the real gaps below.
+- **`SyncHTTPClient` was incomplete** — `OpenVikingStore` + half the tools dispatched
+  `write`/`glob`/`ls`/`rm`/`grep`/`add_skill` which it never implemented, so the store/tools
+  worked **only** against `InMemoryOpenVikingClient`. Added all 6 (canonical
+  `openviking_cli/client/http.py` REST paths) + the `X-OpenViking-Actor-Peer` header.
+- **`OpenVikingStore` was not a real LangGraph store** — standalone class, no `batch()`.
+  `createAgent({ store })` drives a store only through `batch()`, so it would have thrown.
+  Now `extends BaseStore` + implements `batch()`. `@langchain/langgraph` = optional peer dep.
+- **Decided NOT to add** `extract_session` (non-canonical; grubgenie's server route only —
+  canonical extraction is `commit_session`) and **dropped** legacy `agentId` (deprecated;
+  modern scope is `actorPeerId` → `X-OpenViking-Actor-Peer`).
+- **Diner memory model = global-per-diner** (memory follows the diner across
+  restaurants/accounts). Verified server keys user space by `user_id` ONLY
+  (`viking://user/{user_id}/...`, `namespace.py:162`, `user_id.py:54-59`); `viking://user/`
+  is a per-request shorthand the server expands. README documents the wiring:
+  **constant `account` for all diners + `userId = dinerId`** (do NOT pass the restaurant's
+  `accountId` as `account` — auth + vector-layer tenant isolation could silo per restaurant).
 
 ## What's in the package
 Port of all 9 Python modules in `openviking/integrations/langchain/`, flattened to `src/`:
@@ -48,8 +75,8 @@ Port of all 9 Python modules in `openviking/integrations/langchain/`, flattened 
 - Verified `RunnableWithMessageHistory` JS behavior with a probe before porting `context.ts`.
 - Dual ESM+CJS via **tsup** (`external` for `@langchain/*` + `zod`); verified `dist`
   consumable from both `import` and `require`.
-- Peer deps kept lean: only `@langchain/core` + `zod` (langgraph/openai are example-only devDeps).
-- All gates green: `npm run build`, `npm run typecheck`, `npm test` (5/5), `npm pack --dry-run` (12 files).
+- Peer deps: `@langchain/core` + `zod` (required); `@langchain/langgraph` (optional, store only).
+- All gates green: `npm run build`, `npm run typecheck`, `npm test` (12/12), `npm pack` (12 files).
 
 ## What didn't work / gotchas
 - Export probe from `/tmp` failed (node couldn't resolve deps) — must run inside the package dir.
@@ -60,22 +87,28 @@ Port of all 9 Python modules in `openviking/integrations/langchain/`, flattened 
   `app.invoke([...])` works with no config.
 
 ## Known follow-ups (NOT done)
-1. **LICENSE file missing.** package.json declares `AGPL-3.0` (inherited — this is a derivative
-   of AGPL OpenViking code, so it must stay AGPL unless you have relicense rights). Add full
-   AGPL-3.0 `LICENSE` text for compliance. `curl`/`wget` are blocked in this env — fetch via
-   `ctx_fetch_and_index` or paste the text.
-2. **npm 0.1.0 lacks `repository` field** (added to package.json AFTER publish). Next
-   `npm version patch && npm publish` attaches repo link on npm.
-3. No CI. Optional: GitHub Actions publish-on-tag workflow (`npm publish --access public`,
-   needs `NPM_TOKEN` secret).
+1. **FINISH THE 0.2.0 PUBLISH** — run `npm publish --otp=<code>` (only blocker is 2FA).
+2. **LICENSE file missing.** package.json declares `AGPL-3.0` (derivative of AGPL OpenViking;
+   must stay AGPL). Add full AGPL-3.0 `LICENSE` text. `curl`/`wget` blocked — paste or
+   `ctx_fetch_and_index`.
+3. No CI. Optional: GitHub Actions publish-on-tag (`npm publish`, needs `NPM_TOKEN` secret —
+   would also sidestep the manual OTP).
 4. `OpenVikingStore` canonicalized-URI fallback parser is a documented no-op (fine for in-memory
-   + HTTP literal URIs; revisit only if a backend returns non-prefixed URIs).
-5. `live_app.ts` unverified — needs running OpenViking server + `ARK_API_KEY` (Python suite also skips it).
+   + HTTP literal URIs).
+5. `live_app.ts` + the new HTTP methods are **unverified against a live server** — only
+   covered by stubbed-fetch unit tests. Smoke-test `OpenVikingStore` put/get/search against a
+   real OpenViking before grubgenie relies on it.
+6. **grubgenie wiring is NOT done** (read-only this session). To adopt: in
+   `agents.diner.ts`, replace the in-repo store/tools with this package —
+   `new OpenVikingStore({ url, apiKey, account: <CONSTANT diner account>, userId: dinerId })`
+   and `createOpenvikingTools({ ... })`. The in-repo `injectBranchContext`/`uploadSkill`
+   use `extractSession` (swap to `commit_session`) + `addSkill` (now in the package).
 
 ## Next steps (for a fresh agent)
 - `cd ~/Desktop/cloned_repos/openviking-memory-layer && npm install`
-- Verify: `npm run build && npm run typecheck && npm test`
-- If continuing: tackle follow-ups 1–3 above (LICENSE, version bump+republish, CI).
+- Verify: `npm run build && npm run typecheck && npm test` (12 tests).
+- **Publish 0.2.0**: `npm publish --otp=<code>`.
+- Then tackle follow-ups 2–3 (LICENSE, CI) and the grubgenie wiring (#6).
 
 ## Source of truth for parity
 Python originals live in the OpenViking clone:

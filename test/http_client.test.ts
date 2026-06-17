@@ -102,6 +102,14 @@ describe('SyncHTTPClient content/filesystem methods', () => {
     expect(captured[0].url.pathname).toBe('/api/v1/skills');
     expect(captured[0].body).toEqual({ data: 'a skill', wait: true });
   });
+
+  it('get_status hits /api/v1/observer/system', async () => {
+    const { captured, fetch } = stubFetch({ is_healthy: true });
+    vi.stubGlobal('fetch', fetch);
+    await new SyncHTTPClient(base).get_status();
+    expect(captured[0].method).toBe('GET');
+    expect(captured[0].url.pathname).toBe('/api/v1/observer/system');
+  });
 });
 
 describe('OpenVikingStore over SyncHTTPClient', () => {

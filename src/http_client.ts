@@ -278,7 +278,7 @@ export class SyncHTTPClient {
   }
 
   get_status(): Promise<any> {
-    return this.request('GET', '/api/v1/status');
+    return this.request('GET', '/api/v1/observer/system');
   }
 
   is_healthy(): Promise<boolean> {
