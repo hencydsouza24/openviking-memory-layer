@@ -1,0 +1,73 @@
+{
+  "name": "@grubgenie/openviking-memory-layer",
+  "version": "0.1.0",
+  "description": "OpenViking memory adapters for LangChain.js and LangGraph.js — retriever, store, agent tools, chat history, and context middleware.",
+  "license": "AGPL-3.0",
+  "author": "hencydsouza24",
+  "homepage": "https://github.com/hencydsouza24/openviking-memory-layer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hencydsouza24/openviking-memory-layer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hencydsouza24/openviking-memory-layer/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "openviking",
+    "langchain",
+    "langgraph",
+    "memory",
+    "retriever",
+    "rag",
+    "agent",
+    "llm"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run clean && npm run build",
+    "example:langgraph-agent": "tsx examples/langgraph/agent/quick_app.ts",
+    "example:langgraph-agent-live": "tsx examples/langgraph/agent/live_app.ts",
+    "example:langgraph-middleware": "tsx examples/langgraph/middleware/quick_app.ts",
+    "example:langchain-rag": "tsx examples/langchain/rag/quick_app.ts",
+    "example:langchain-context-backend": "tsx examples/langchain/context-backend/quick_app.ts",
+    "example:langchain-message-history": "tsx examples/langchain/message-history/quick_app.ts"
+  },
+  "peerDependencies": {
+    "@langchain/core": ">=0.3.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@langchain/core": "^0.3.40",
+    "@langchain/langgraph": "^0.2.55",
+    "@langchain/openai": "^0.4.4",
+    "@types/node": "^22.13.5",
+    "tsup": "^8.3.6",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.7",
+    "zod": "^3.24.2"
+  }
+}
