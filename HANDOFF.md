@@ -6,18 +6,29 @@ Standalone, published npm package: a faithful **TypeScript port** of the Python
 can use OpenViking as a memory backend (retriever, store, agent tools, chat
 history, context middleware). Detached into its own GitHub repo.
 
-## Status: v0.2.0 committed + pushed — NOT yet on npm (blocked on OTP)
-- **npm**: latest published is still `@grubgenie/openviking-memory-layer@0.1.0`.
-  **0.2.0 publish is pending** — `npm publish` keeps failing with `EOTP` (2FA).
-  **To finish the release, run interactively:** `npm publish --otp=<6-digit-code>`
-  (build/prepublish already pass; only the OTP is missing). npm user: `hencydsouza24`.
+## Status: v0.2.1 PUBLISHED + fully live-verified ✅
+- **npm**: `@grubgenie/openviking-memory-layer@0.2.1` — published, public, live.
+  (0.2.0 was tagged but its publish failed on OTP; 0.2.1 supersedes it and shipped.)
   https://www.npmjs.com/package/@grubgenie/openviking-memory-layer
+  → grubgenie should install **`@0.2.1`** (0.2.0 had a broken `get_status` path).
+  npm user: `hencydsouza24`. Publish needs interactive `--otp=<code>` (2FA).
 - **GitHub**: https://github.com/hencydsouza24/openviking-memory-layer — `main` pushed
-  through `v0.2.0` (commit `1a141f4` feature + `9a2b787` version bump; tag `v0.2.0` pushed).
+  through `fbe5624`. Tags: `v0.2.0`, `v0.2.1`. Key commits: `1a141f4` (feature),
+  `9a2b787` (v0.2.0 bump), `c2aba29` (get_status fix + v0.2.1), `fbe5624` (live verify suite).
 - **Repo root**: `~/Desktop/cloned_repos/openviking-memory-layer` (standalone, own git).
 - `.graymatter/` is gitignored (tool artifact, not committed).
+- **Live verification**: `scripts/verify_live.ts` (committed dev tool, not packed) exercises
+  EVERY export against a running server — **38/38 pass**. Run:
+  `OPENVIKING_URL=http://127.0.0.1:1933 OPENVIKING_API_KEY=openviking-dev-key npx tsx scripts/verify_live.ts`
+  (grubgenie's dev server runs in OrbStack on `:1933`, key `openviking-dev-key`).
+  Found + fixed ONE real bug: `get_status` path was `/api/v1/status` → corrected to
+  `/api/v1/observer/system` (locked by a contract test). Verified live: store put→get
+  deterministic, per-user isolation (other userId → null), retriever (4 docs), assembler
+  (1517-char block, 5 recall), history round-trip, middleware, all 12 tools. Semantic
+  recall works live (earlier 0-hit was embedding latency). `add_skill` needs a doc with
+  YAML frontmatter (server rule, not a client bug).
 
-## This session (the 0.2.0 changes)
+## This session (the 0.2.x changes)
 Goal was to make the package consumable by `grubgenie_api_refactor`
 (`src/modules/agents/agents.diner.ts` uses `OpenVikingStore` as `createAgent({ store })`
 + `createMemoryTools`). grubgenie was **read-only**; only this package changed.
@@ -76,7 +87,9 @@ Port of all 9 Python modules in `openviking/integrations/langchain/`, flattened 
 - Dual ESM+CJS via **tsup** (`external` for `@langchain/*` + `zod`); verified `dist`
   consumable from both `import` and `require`.
 - Peer deps: `@langchain/core` + `zod` (required); `@langchain/langgraph` (optional, store only).
-- All gates green: `npm run build`, `npm run typecheck`, `npm test` (12/12), `npm pack` (12 files).
+- All gates green: `npm run build`, `npm run typecheck`, `npm test` (13/13), `npm pack` (12 files).
+- Full-export LIVE verification via `scripts/verify_live.ts` (38/38) — the definitive proof
+  every export works against a real server; re-run it after any `src/` change.
 
 ## What didn't work / gotchas
 - Export probe from `/tmp` failed (node couldn't resolve deps) — must run inside the package dir.
@@ -87,28 +100,29 @@ Port of all 9 Python modules in `openviking/integrations/langchain/`, flattened 
   `app.invoke([...])` works with no config.
 
 ## Known follow-ups (NOT done)
-1. **FINISH THE 0.2.0 PUBLISH** — run `npm publish --otp=<code>` (only blocker is 2FA).
-2. **LICENSE file missing.** package.json declares `AGPL-3.0` (derivative of AGPL OpenViking;
+1. **LICENSE file missing.** package.json declares `AGPL-3.0` (derivative of AGPL OpenViking;
    must stay AGPL). Add full AGPL-3.0 `LICENSE` text. `curl`/`wget` blocked — paste or
    `ctx_fetch_and_index`.
-3. No CI. Optional: GitHub Actions publish-on-tag (`npm publish`, needs `NPM_TOKEN` secret —
+2. No CI. Optional: GitHub Actions publish-on-tag (`npm publish`, needs `NPM_TOKEN` secret —
    would also sidestep the manual OTP).
-4. `OpenVikingStore` canonicalized-URI fallback parser is a documented no-op (fine for in-memory
+3. `OpenVikingStore` canonicalized-URI fallback parser is a documented no-op (fine for in-memory
    + HTTP literal URIs).
-5. `live_app.ts` + the new HTTP methods are **unverified against a live server** — only
-   covered by stubbed-fetch unit tests. Smoke-test `OpenVikingStore` put/get/search against a
-   real OpenViking before grubgenie relies on it.
-6. **grubgenie wiring is NOT done** (read-only this session). To adopt: in
-   `agents.diner.ts`, replace the in-repo store/tools with this package —
+4. **grubgenie wiring is NOT done** (read-only this session, by design). To adopt the published
+   `@0.2.1` in `agents.diner.ts`: replace the in-repo store/tools with this package —
    `new OpenVikingStore({ url, apiKey, account: <CONSTANT diner account>, userId: dinerId })`
-   and `createOpenvikingTools({ ... })`. The in-repo `injectBranchContext`/`uploadSkill`
-   use `extractSession` (swap to `commit_session`) + `addSkill` (now in the package).
+   and `createOpenvikingTools({ ... })`. For global-per-diner memory across restaurants, use a
+   SINGLE constant `account` (NOT `ctx.accountId`) + `userId = dinerId`. The in-repo
+   `injectBranchContext`/`uploadSkill` use `extractSession` (swap to `commit_session`) +
+   `addSkill` (now in the package). NOTE `add_skill` payloads need YAML frontmatter.
+5. Semantic `search`/recall depends on the server's async embedding pipeline — the KV path
+   (get/put/delete) is exact/immediate; query recall may lag right after a write.
 
 ## Next steps (for a fresh agent)
 - `cd ~/Desktop/cloned_repos/openviking-memory-layer && npm install`
-- Verify: `npm run build && npm run typecheck && npm test` (12 tests).
-- **Publish 0.2.0**: `npm publish --otp=<code>`.
-- Then tackle follow-ups 2–3 (LICENSE, CI) and the grubgenie wiring (#6).
+- Gates: `npm run build && npm run typecheck && npm test` (13 tests).
+- Live re-verify (needs a running server): `npx tsx scripts/verify_live.ts` (38 checks).
+- Nothing to ship unless `src/` changes — `0.2.1` is current on npm and verified.
+- Remaining value-add: follow-ups 1–2 (LICENSE, CI) and the grubgenie wiring (#4).
 
 ## Source of truth for parity
 Python originals live in the OpenViking clone:
