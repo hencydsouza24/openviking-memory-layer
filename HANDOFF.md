@@ -6,15 +6,16 @@ Standalone, published npm package: a faithful **TypeScript port** of the Python
 can use OpenViking as a memory backend (retriever, store, agent tools, chat
 history, context middleware). Detached into its own GitHub repo.
 
-## Status: v0.2.1 PUBLISHED + fully live-verified ✅
-- **npm**: `@grubgenie/openviking-memory-layer@0.2.1` — published, public, live.
-  (0.2.0 was tagged but its publish failed on OTP; 0.2.1 supersedes it and shipped.)
+## Status: v0.2.1 published + live-verified; v0.2.2 (README) tagged, publish PENDING (OTP)
+- **npm**: latest PUBLISHED = `@grubgenie/openviking-memory-layer@0.2.1` (public, live, fully verified).
+  **v0.2.2 is tagged + pushed but NOT yet published** — README-only change (expanded usage docs,
+  identical code to 0.2.1). To finish: run interactively `npm publish --otp=<6-digit-code>`
+  (npm user `hencydsouza24`; publish always needs 2FA OTP). 0.2.2 just refreshes the npm README page.
+  → grubgenie should install **`@0.2.1`** (or `@0.2.2` once published). Avoid 0.2.0 (broken `get_status`).
   https://www.npmjs.com/package/@grubgenie/openviking-memory-layer
-  → grubgenie should install **`@0.2.1`** (0.2.0 had a broken `get_status` path).
-  npm user: `hencydsouza24`. Publish needs interactive `--otp=<code>` (2FA).
-- **GitHub**: https://github.com/hencydsouza24/openviking-memory-layer — `main` pushed
-  through `fbe5624`. Tags: `v0.2.0`, `v0.2.1`. Key commits: `1a141f4` (feature),
-  `9a2b787` (v0.2.0 bump), `c2aba29` (get_status fix + v0.2.1), `fbe5624` (live verify suite).
+- **GitHub**: https://github.com/hencydsouza24/openviking-memory-layer — `main` @ `ffb1832`.
+  Tags: `v0.2.0`, `v0.2.1`, `v0.2.2`. Key commits: `1a141f4` (feature), `c2aba29` (get_status fix +
+  v0.2.1), `fbe5624` (live verify suite), `fbf6aa1` (README expansion), `ffb1832` (v0.2.2 bump).
 - **Repo root**: `~/Desktop/cloned_repos/openviking-memory-layer` (standalone, own git).
 - `.graymatter/` is gitignored (tool artifact, not committed).
 - **Live verification**: `scripts/verify_live.ts` (committed dev tool, not packed) exercises
@@ -118,11 +119,12 @@ Port of all 9 Python modules in `openviking/integrations/langchain/`, flattened 
    (get/put/delete) is exact/immediate; query recall may lag right after a write.
 
 ## Next steps (for a fresh agent)
+- **Publish the pending v0.2.2**: `npm publish --otp=<code>` (README refresh; optional, code unchanged).
 - `cd ~/Desktop/cloned_repos/openviking-memory-layer && npm install`
 - Gates: `npm run build && npm run typecheck && npm test` (13 tests).
 - Live re-verify (needs a running server): `npx tsx scripts/verify_live.ts` (38 checks).
-- Nothing to ship unless `src/` changes — `0.2.1` is current on npm and verified.
-- Remaining value-add: follow-ups 1–2 (LICENSE, CI) and the grubgenie wiring (#4).
+- README now has full per-export usage + a full `createAgent` + store + tools example.
+- Remaining value-add: follow-ups 1–2 (LICENSE, CI) and the grubgenie wiring (#3).
 
 ## Source of truth for parity
 Python originals live in the OpenViking clone:
