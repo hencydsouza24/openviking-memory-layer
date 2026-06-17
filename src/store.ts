@@ -16,6 +16,9 @@
  * covers every case the adapters exercise.
  */
 
+import { BaseStore } from '@langchain/langgraph';
+import type { Operation, OperationResults } from '@langchain/langgraph';
+
 import { callOpenviking, ensureClient, itemValue, iterResultItems } from './client.js';
 import type { OpenVikingClientLike, OpenVikingConnection } from './client.js';
 
@@ -38,7 +41,7 @@ export class SearchItem extends Item {
     value: Record<string, any>,
     createdAt: Date,
     updatedAt: Date,
-    public score: number | null = null,
+    public score?: number,
   ) {
     super(namespace, key, value, createdAt, updatedAt);
   }
@@ -52,7 +55,7 @@ export interface OpenVikingStoreParams extends OpenVikingConnection {
   searchFetchLimit?: number;
 }
 
-export class OpenVikingStore {
+export class OpenVikingStore extends BaseStore {
   private connection: OpenVikingConnection;
   rootUri: string;
   index: boolean | string[] | null;
@@ -62,6 +65,7 @@ export class OpenVikingStore {
   private clientCache: OpenVikingClientLike | null = null;
 
   constructor(params: OpenVikingStoreParams = {}) {
+    super();
     this.connection = {
       client: params.client ?? null,
       url: params.url ?? null,
@@ -348,7 +352,58 @@ export class OpenVikingStore {
   }
 
   private toSearchItem(item: Item, score: number | null): SearchItem {
-    return new SearchItem(item.namespace, item.key, item.value, item.createdAt, item.updatedAt, score);
+    return new SearchItem(
+      item.namespace,
+      item.key,
+      item.value,
+      item.createdAt,
+      item.updatedAt,
+      score == null ? undefined : score,
+    );
+  }
+
+  /**
+   * BaseStore contract: execute a batch of operations. LangGraph drives the
+   * store exclusively through this method (its public get/put/search/delete
+   * helpers delegate here), so implementing it makes OpenVikingStore usable as
+   * `createAgent({ store })`. Each op is dispatched to the typed method above.
+   */
+  async batch<Op extends Operation[]>(operations: Op): Promise<OperationResults<Op>> {
+    const results: unknown[] = [];
+    for (const op of operations) {
+      if ('namespacePrefix' in op) {
+        results.push(
+          await this.search(op.namespacePrefix, {
+            query: op.query ?? null,
+            filter: op.filter ?? null,
+            limit: op.limit ?? 10,
+            offset: op.offset ?? 0,
+          }),
+        );
+      } else if ('value' in op) {
+        if (op.value === null) {
+          await this.delete(op.namespace, op.key);
+        } else {
+          await this.put(op.namespace, op.key, op.value, op.index ?? null);
+        }
+        results.push(undefined);
+      } else if ('key' in op) {
+        results.push(await this.get(op.namespace, op.key));
+      } else {
+        const prefix = op.matchConditions?.find((c) => c.matchType === 'prefix')?.path;
+        const suffix = op.matchConditions?.find((c) => c.matchType === 'suffix')?.path;
+        results.push(
+          await this.listNamespaces({
+            prefix: prefix as string[] | undefined,
+            suffix: suffix as string[] | undefined,
+            maxDepth: op.maxDepth ?? null,
+            limit: op.limit,
+            offset: op.offset,
+          }),
+        );
+      }
+    }
+    return results as OperationResults<Op>;
   }
 }
 

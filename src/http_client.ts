@@ -1,17 +1,21 @@
 // Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 // SPDX-License-Identifier: AGPL-3.0
 /**
- * Minimal HTTP OpenViking client for the live example.
+ * HTTP OpenViking client backing the LangChain/LangGraph adapters.
  *
- * TypeScript analog of `openviking.client.SyncHTTPClient` for the subset of
- * methods the LangChain/LangGraph adapters call. It talks to the OpenViking
- * REST API and unwraps the `{ status, result, error }` envelope. Methods are
- * named snake_case to match the protocol strings used by `callOpenviking`, and
- * accept camelCase option objects.
+ * TypeScript analog of `openviking.client.SyncHTTPClient`. It implements every
+ * protocol method the adapters dispatch via `callOpenviking` — including the
+ * content/filesystem ops (`write`, `glob`, `ls`, `rm`, `grep`) that
+ * `OpenVikingStore` needs — so the store and tools run against a real
+ * OpenViking server, not just the in-memory client. It talks to the REST API
+ * and unwraps the `{ status, result, error }` envelope. Methods are named
+ * snake_case to match the protocol strings used by `callOpenviking`, and accept
+ * camelCase option objects.
  *
- * This client is exercised only by `langgraph/agent/live_app.ts`, which needs a
- * running OpenViking server. Endpoint paths follow the documented OpenViking
- * HTTP routes; adjust them here if your deployment differs.
+ * Endpoint paths mirror the canonical `openviking_cli` HTTP client; adjust them
+ * here if your deployment differs. Tenant scope is set via the
+ * `X-OpenViking-Account` / `X-OpenViking-User` / `X-OpenViking-Actor-Peer`
+ * headers (see `headers()`).
  */
 
 import type { OpenVikingPart } from './client.js';
@@ -39,6 +43,7 @@ export class SyncHTTPClient {
   private account?: string;
   private user?: string;
   private userId?: string;
+  private actorPeerId?: string;
   private timeoutMs: number;
   private extraHeaders: Record<string, string>;
   _initialized = false;
@@ -49,6 +54,7 @@ export class SyncHTTPClient {
     this.account = opts.account ?? undefined;
     this.user = opts.user ?? undefined;
     this.userId = opts.userId ?? process.env.OPENVIKING_USER_ID ?? undefined;
+    this.actorPeerId = opts.actorPeerId ?? undefined;
     this.timeoutMs = (opts.timeout ?? 60) * 1000;
     this.extraHeaders = opts.extraHeaders ?? {};
   }
@@ -69,6 +75,7 @@ export class SyncHTTPClient {
     if (this.apiKey) headers['X-API-Key'] = this.apiKey;
     if (this.account) headers['X-OpenViking-Account'] = this.account;
     if (this.user ?? this.userId) headers['X-OpenViking-User'] = (this.user ?? this.userId)!;
+    if (this.actorPeerId) headers['X-OpenViking-Actor-Peer'] = this.actorPeerId;
     return headers;
   }
 
@@ -207,6 +214,66 @@ export class SyncHTTPClient {
   add_resource(args: { path: string; to?: string | null }): Promise<any> {
     return this.request('POST', '/api/v1/resources', {
       body: { path: args.path, target: args.to ?? undefined },
+    });
+  }
+
+  // ============= content / filesystem =============
+
+  write(args: { uri: string; content: string; mode?: string; wait?: boolean; timeout?: number | null }): Promise<any> {
+    return this.request('POST', '/api/v1/content/write', {
+      body: {
+        uri: args.uri,
+        content: args.content,
+        mode: args.mode ?? 'replace',
+        wait: args.wait ?? false,
+        timeout: args.timeout ?? undefined,
+      },
+    });
+  }
+
+  glob(args: { pattern: string; uri?: string }): Promise<any> {
+    return this.request('POST', '/api/v1/search/glob', {
+      body: { pattern: args.pattern, uri: args.uri ?? 'viking://' },
+    });
+  }
+
+  ls(args: { uri: string; recursive?: boolean }): Promise<any> {
+    return this.request('GET', '/api/v1/fs/ls', {
+      query: {
+        uri: args.uri,
+        recursive: args.recursive ? 'true' : undefined,
+      },
+    });
+  }
+
+  rm(args: { uri: string; recursive?: boolean; wait?: boolean; timeout?: number | null }): Promise<any> {
+    return this.request('DELETE', '/api/v1/fs', {
+      query: {
+        uri: args.uri,
+        recursive: args.recursive ? 'true' : 'false',
+        wait: args.wait ? 'true' : undefined,
+        timeout: args.timeout != null ? String(args.timeout) : undefined,
+      },
+    });
+  }
+
+  grep(args: { uri: string; pattern: string; caseInsensitive?: boolean; nodeLimit?: number | null }): Promise<any> {
+    const body: Record<string, unknown> = {
+      uri: args.uri,
+      pattern: args.pattern,
+      case_insensitive: args.caseInsensitive ?? false,
+    };
+    if (args.nodeLimit != null) body.node_limit = args.nodeLimit;
+    return this.request('POST', '/api/v1/search/grep', { body });
+  }
+
+  add_skill(args: { data: Record<string, unknown> | string; wait?: boolean; timeout?: number | null }): Promise<any> {
+    return this.request('POST', '/api/v1/skills', {
+      body: {
+        data: args.data,
+        wait: args.wait ?? false,
+        timeout: args.timeout ?? undefined,
+      },
     });
   }
 

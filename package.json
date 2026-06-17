@@ -57,7 +57,13 @@
   },
   "peerDependencies": {
     "@langchain/core": ">=0.3.0",
+    "@langchain/langgraph": ">=0.2.0",
     "zod": "^3.23.0"
+  },
+  "peerDependenciesMeta": {
+    "@langchain/langgraph": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@langchain/core": "^0.3.40",

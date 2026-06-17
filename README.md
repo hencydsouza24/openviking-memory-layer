@@ -13,17 +13,18 @@ npm install @grubgenie/openviking-memory-layer @langchain/core zod
 ```
 
 `@langchain/core` and `zod` are **peer dependencies** — you provide them.
-For the LangGraph examples you also want `@langchain/langgraph` (and
-`@langchain/openai` for the live LLM app).
+`@langchain/langgraph` is an **optional peer** — required only if you use
+`OpenVikingStore` (it extends LangGraph's `BaseStore`) or the LangGraph
+examples. Add `@langchain/openai` for the live LLM app.
 
 ## Exports
 
 | Export | What it is |
 |--------|-----------|
 | `InMemoryOpenVikingClient` | Deterministic in-memory client for tests/examples |
-| `SyncHTTPClient` | REST client for a running OpenViking server |
+| `SyncHTTPClient` | REST client for a running OpenViking server (full protocol: sessions, search, content/fs `write`/`glob`/`ls`/`rm`/`grep`, skills) |
 | `OpenVikingRetriever` | LangChain `BaseRetriever` over OpenViking recall |
-| `OpenVikingStore` | LangGraph store shape (put/get/search/delete) |
+| `OpenVikingStore` | LangGraph `BaseStore` — durable long-term memory for `createAgent({ store })` |
 | `createOpenvikingTools` | `viking_*` agent tools (zod schemas), by profile |
 | `OpenVikingChatMessageHistory` | Chat history persisted in an OpenViking session |
 | `withOpenvikingContext` | Wrap any runnable with context injection + history |
@@ -68,6 +69,60 @@ const tools = createOpenvikingTools({ client, profile: 'retrieval' });
 
 Profiles: `retrieval` (read-only), `agent` (default, adds store/resource/skill),
 `admin` (adds forget).
+
+### LangGraph long-term store
+
+`OpenVikingStore` is a real LangGraph `BaseStore`, so you can hand it to
+`createAgent` as the durable cross-thread memory backend. It stores each entry
+as a JSON record under `<rootUri>/data/<namespace>/<key>.json` (deterministic
+`put` → `get`) plus a markdown projection under `<rootUri>/index/...` for
+query-based semantic `search`. Pass connection settings and the store lazily
+builds a `SyncHTTPClient`:
+
+```ts
+import { OpenVikingStore } from '@grubgenie/openviking-memory-layer';
+import { createAgent } from 'langchain';
+
+const store = new OpenVikingStore({
+  url: 'http://127.0.0.1:1933',
+  apiKey: '...',
+  account: 'my-account',
+  userId: 'user-123',
+});
+
+const agent = createAgent({ model, tools, store });
+```
+
+#### Per-user memory isolation
+
+OpenViking keys the user space by **`user_id` only** — `viking://user/…` is a
+server-side shorthand that expands to `viking://user/{user_id}/…` per request
+identity. So the store's default `rootUri` (`viking://user/memories/langgraph_store`)
+resolves to a **separate space per `userId`** with no extra wiring. Identity is
+sent via the `X-OpenViking-Account` / `X-OpenViking-User` /
+`X-OpenViking-Actor-Peer` headers (`actorPeerId`), and requires the server to run
+in trusted mode.
+
+To make memory **follow one subject everywhere** (e.g. a diner whose
+preferences should persist across every restaurant/account), key it by that
+subject and keep the account constant:
+
+```ts
+const store = new OpenVikingStore({
+  url, apiKey,
+  account: DINER_MEMORY_ACCOUNT,        // one constant account for all subjects
+  userId:  dinerId,                     // stable, global per subject
+  // carry restaurant/branch as `actorPeerId` or value metadata — NOT `account`
+});
+```
+
+Because the user space is `user_id`-keyed, the same `userId` resolves to the
+same memories regardless of which restaurant is serving the request. Use a
+**single constant `account`** rather than a per-restaurant one: identity is
+asserted as `(account, user)` and the vector layer applies tenant isolation, so
+a constant account guarantees sharing is purely subject-keyed. Conversely, to
+silo memory per subject **and** context, encode the context into `rootUri`
+(e.g. `viking://user/memories/branches/${branchId}`).
 
 ### LangGraph context middleware
 
