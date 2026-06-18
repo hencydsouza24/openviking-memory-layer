@@ -223,7 +223,7 @@ export function createOpenvikingTools(
         'A write operation for confirmed "remember/save this" workflows.',
       schema: z.object({
         messages: z
-          .union([z.string(), z.array(z.record(z.any()))])
+          .union([z.string(), z.array(z.record(z.string(), z.any()))])
           .describe('Message text or role/content message objects to append.'),
         sessionId: z.string().nullable().optional().describe('Session id; created when omitted.'),
         commit: z.boolean().optional().describe('Commit the appended messages immediately.'),
@@ -315,7 +315,7 @@ export function createOpenvikingTools(
       name: 'viking_add_skill',
       description: 'Register a reusable OpenViking skill for trusted admin workflows.',
       schema: z.object({
-        data: z.union([z.record(z.any()), z.string()]).describe('Skill definition or document.'),
+        data: z.union([z.record(z.string(), z.any()), z.string()]).describe('Skill definition or document.'),
         wait: z.boolean().optional().describe('Wait for skill registration to finish.'),
         timeout: z.number().nullable().optional().describe('Optional wait timeout in seconds.'),
       }),
