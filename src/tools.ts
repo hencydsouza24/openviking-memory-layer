@@ -15,7 +15,7 @@
  */
 
 import { tool } from '@langchain/core/tools';
-import type { DynamicStructuredTool } from '@langchain/core/tools';
+import type { StructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 
 import {
@@ -37,7 +37,7 @@ export interface CreateOpenVikingToolsParams extends OpenVikingConnection {
 
 export function createOpenvikingTools(
   params: CreateOpenVikingToolsParams = {},
-): DynamicStructuredTool[] {
+): StructuredTool[] {
   const { profile = 'agent', peerId = null, toolNames = null, allowForget = false } = params;
   const connection: OpenVikingConnection = {
     client: params.client ?? null,
@@ -357,19 +357,19 @@ export function createOpenvikingTools(
     },
   );
 
-  const allTools: Record<string, DynamicStructuredTool> = {
-    viking_find: vikingFind as DynamicStructuredTool,
-    viking_search: vikingSearch as DynamicStructuredTool,
-    viking_browse: vikingBrowse as DynamicStructuredTool,
-    viking_read: vikingRead as DynamicStructuredTool,
-    viking_grep: vikingGrep as DynamicStructuredTool,
-    viking_archive_search: vikingArchiveSearch as DynamicStructuredTool,
-    viking_archive_expand: vikingArchiveExpand as DynamicStructuredTool,
-    viking_store: vikingStore as DynamicStructuredTool,
-    viking_add_resource: vikingAddResource as DynamicStructuredTool,
-    viking_add_skill: vikingAddSkill as DynamicStructuredTool,
-    viking_health: vikingHealth as DynamicStructuredTool,
-    viking_forget: vikingForget as DynamicStructuredTool,
+  const allTools: Record<string, StructuredTool> = {
+    viking_find: vikingFind,
+    viking_search: vikingSearch,
+    viking_browse: vikingBrowse,
+    viking_read: vikingRead,
+    viking_grep: vikingGrep,
+    viking_archive_search: vikingArchiveSearch,
+    viking_archive_expand: vikingArchiveExpand,
+    viking_store: vikingStore,
+    viking_add_resource: vikingAddResource,
+    viking_add_skill: vikingAddSkill,
+    viking_health: vikingHealth,
+    viking_forget: vikingForget,
   };
 
   const selected = toolNames ?? profileToolNames(profile, allowForget);
