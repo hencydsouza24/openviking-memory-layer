@@ -15,7 +15,7 @@
  */
 
 import { tool } from '@langchain/core/tools';
-import type { StructuredTool } from '@langchain/core/tools';
+import type { ClientTool } from '@langchain/core/tools';
 import { z } from 'zod';
 
 import {
@@ -37,7 +37,7 @@ export interface CreateOpenVikingToolsParams extends OpenVikingConnection {
 
 export function createOpenvikingTools(
   params: CreateOpenVikingToolsParams = {},
-): StructuredTool[] {
+): ClientTool[] {
   const { profile = 'agent', peerId = null, toolNames = null, allowForget = false } = params;
   const connection: OpenVikingConnection = {
     client: params.client ?? null,
@@ -357,7 +357,7 @@ export function createOpenvikingTools(
     },
   );
 
-  const allTools: Record<string, StructuredTool> = {
+  const allTools = {
     viking_find: vikingFind,
     viking_search: vikingSearch,
     viking_browse: vikingBrowse,
@@ -373,7 +373,9 @@ export function createOpenvikingTools(
   };
 
   const selected = toolNames ?? profileToolNames(profile, allowForget);
-  return selected.filter((name) => name in allTools).map((name) => allTools[name]);
+  return selected
+    .filter((name): name is keyof typeof allTools => name in allTools)
+    .map((name) => allTools[name] as ClientTool);
 }
 
 function profileToolNames(profile: string, allowForget: boolean): string[] {
