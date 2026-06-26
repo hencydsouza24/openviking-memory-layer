@@ -33,12 +33,13 @@ export interface CreateOpenVikingToolsParams extends OpenVikingConnection {
   peerId?: string | null;
   toolNames?: string[] | null;
   allowForget?: boolean;
+  toolNamePrefix?: string;
 }
 
 export function createOpenvikingTools(
   params: CreateOpenVikingToolsParams = {},
 ): ClientTool[] {
-  const { profile = 'agent', peerId = null, toolNames = null, allowForget = false } = params;
+  const { profile = 'agent', peerId = null, toolNames = null, allowForget = false, toolNamePrefix = '' } = params;
   const connection: OpenVikingConnection = {
     client: params.client ?? null,
     url: params.url ?? null,
@@ -375,7 +376,11 @@ export function createOpenvikingTools(
   const selected = toolNames ?? profileToolNames(profile, allowForget);
   return selected
     .filter((name): name is keyof typeof allTools => name in allTools)
-    .map((name) => allTools[name] as ClientTool);
+    .map((name) => {
+      const t = allTools[name] as ClientTool;
+      if (!toolNamePrefix) return t;
+      return Object.create(t, { name: { value: toolNamePrefix + t.name, writable: true, enumerable: true, configurable: true } }) as ClientTool;
+    });
 }
 
 function profileToolNames(profile: string, allowForget: boolean): string[] {
