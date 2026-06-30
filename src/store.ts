@@ -41,7 +41,7 @@ export class SearchItem extends Item {
     value: Record<string, any>,
     createdAt: Date,
     updatedAt: Date,
-    public score?: number,
+    public score: number,
   ) {
     super(namespace, key, value, createdAt, updatedAt);
   }
@@ -358,7 +358,7 @@ export class OpenVikingStore extends BaseStore {
       item.value,
       item.createdAt,
       item.updatedAt,
-      score == null ? undefined : score,
+      score ?? 0,
     );
   }
 
