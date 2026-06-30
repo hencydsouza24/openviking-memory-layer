@@ -348,14 +348,49 @@ function buildAllTools(getClient: () => Promise<OpenVikingClientLike>, peerId: s
   };
 }
 
-// Derived automatically from buildAllTools — no manual list to maintain.
+/**
+ * Union of every tool name `createOpenvikingTools` can return.
+ * Derived automatically from `buildAllTools` — adding a tool there
+ * expands this type for free.
+ *
+ * - `viking_find`           — stateless semantic retrieval (no session context)
+ * - `viking_search`         — session-aware semantic retrieval
+ * - `viking_browse`         — list / glob a namespace or directory URI
+ * - `viking_read`           — read one or more file/document URIs
+ * - `viking_grep`           — grep file content with a text/regex pattern
+ * - `viking_store`          — append messages to a session and commit to long-term memory
+ * - `viking_archive_search` — search committed session archive context
+ * - `viking_archive_expand` — expand a specific committed archive by id
+ * - `viking_add_resource`   — import a URL / repo / file into OpenViking
+ * - `viking_add_skill`      — register a reusable skill (trusted admin only)
+ * - `viking_health`         — check OpenViking server health/status
+ * - `viking_forget`         — delete a URI from OpenViking (destructive; off by default)
+ */
 export type OpenvikingToolName = keyof ReturnType<typeof buildAllTools>;
 
 export interface CreateOpenVikingToolsParams extends OpenVikingConnection {
+  /**
+   * Preset tool selection. Ignored when `toolNames` is provided.
+   *
+   * - `'agent'`     (default) — retrieval tools + `viking_store`, `viking_add_resource`,
+   *                             `viking_add_skill`, `viking_health`. Suitable for most agents.
+   * - `'retrieval'`           — read-only tools only (`viking_find`, `viking_search`,
+   *                             `viking_browse`, `viking_read`, `viking_grep`,
+   *                             `viking_archive_*`, `viking_health`). No writes.
+   * - `'admin'`               — everything including `viking_forget`. Use only for
+   *                             trusted admin workflows.
+   */
   profile?: OpenvikingProfile;
   peerId?: string | null;
+  /** Explicit list of tools to include. Overrides `profile` when set. */
   toolNames?: OpenvikingToolName[] | null;
+  /** Also include `viking_forget` (destructive delete). Default: false. */
   allowForget?: boolean;
+  /**
+   * Optional prefix prepended to every returned tool's `name`.
+   * Schema and invoke logic are unchanged — only the name the model sees differs.
+   * @example `toolNamePrefix: 'branch_'` → `branch_viking_find`, `branch_viking_store`, …
+   */
   toolNamePrefix?: string;
 }
 
@@ -394,7 +429,9 @@ export function createOpenvikingTools(
     });
 }
 
+/** All valid `profile` values for `createOpenvikingTools`. */
 export const OPENVIKING_PROFILES = ['agent', 'retrieval', 'admin'] as const;
+/** @see {@link OPENVIKING_PROFILES} and `CreateOpenVikingToolsParams.profile` for per-value docs. */
 export type OpenvikingProfile = (typeof OPENVIKING_PROFILES)[number];
 
 function profileToolNames(profile: OpenvikingProfile, allowForget: boolean): OpenvikingToolName[] {
