@@ -28,38 +28,12 @@ import {
 } from './client.js';
 import type { OpenVikingClientLike, OpenVikingConnection } from './client.js';
 
-export interface CreateOpenVikingToolsParams extends OpenVikingConnection {
-  profile?: string;
-  peerId?: string | null;
-  toolNames?: string[] | null;
-  allowForget?: boolean;
-  toolNamePrefix?: string;
-}
-
-export function createOpenvikingTools(
-  params: CreateOpenVikingToolsParams = {},
-): ClientTool[] {
-  const { profile = 'agent', peerId = null, toolNames = null, allowForget = false, toolNamePrefix = '' } = params;
-  const connection: OpenVikingConnection = {
-    client: params.client ?? null,
-    url: params.url ?? null,
-    apiKey: params.apiKey ?? null,
-    account: params.account ?? null,
-    user: params.user ?? null,
-    userId: params.userId ?? null,
-    actorPeerId: params.actorPeerId ?? null,
-    path: params.path ?? null,
-    timeout: params.timeout,
-    extraHeaders: params.extraHeaders ?? null,
-    autoInitialize: params.autoInitialize ?? true,
-  };
-
-  let cachedClient: OpenVikingClientLike | null = null;
-  const getClient = async (): Promise<OpenVikingClientLike> => {
-    if (cachedClient == null) cachedClient = await ensureClient(connection);
-    return cachedClient;
-  };
-
+// ---------------------------------------------------------------------------
+// buildAllTools — module-level factory so OpenvikingToolName can be derived
+// automatically from the object keys. Adding a new tool here is the single
+// change required; the type and the filter both update for free.
+// ---------------------------------------------------------------------------
+function buildAllTools(getClient: () => Promise<OpenVikingClientLike>, peerId: string | null) {
   const vikingFind = tool(
     async ({ query, targetUri = '', limit = 8, minScore = undefined }) => {
       const result = await callOpenviking(await getClient(), 'find', {
@@ -358,7 +332,7 @@ export function createOpenvikingTools(
     },
   );
 
-  const allTools = {
+  return {
     viking_find: vikingFind,
     viking_search: vikingSearch,
     viking_browse: vikingBrowse,
@@ -372,7 +346,44 @@ export function createOpenvikingTools(
     viking_health: vikingHealth,
     viking_forget: vikingForget,
   };
+}
 
+// Derived automatically from buildAllTools — no manual list to maintain.
+export type OpenvikingToolName = keyof ReturnType<typeof buildAllTools>;
+
+export interface CreateOpenVikingToolsParams extends OpenVikingConnection {
+  profile?: OpenvikingProfile;
+  peerId?: string | null;
+  toolNames?: OpenvikingToolName[] | null;
+  allowForget?: boolean;
+  toolNamePrefix?: string;
+}
+
+export function createOpenvikingTools(
+  params: CreateOpenVikingToolsParams = {},
+): ClientTool[] {
+  const { profile = 'agent', peerId = null, toolNames = null, allowForget = false, toolNamePrefix = '' } = params;
+  const connection: OpenVikingConnection = {
+    client: params.client ?? null,
+    url: params.url ?? null,
+    apiKey: params.apiKey ?? null,
+    account: params.account ?? null,
+    user: params.user ?? null,
+    userId: params.userId ?? null,
+    actorPeerId: params.actorPeerId ?? null,
+    path: params.path ?? null,
+    timeout: params.timeout,
+    extraHeaders: params.extraHeaders ?? null,
+    autoInitialize: params.autoInitialize ?? true,
+  };
+
+  let cachedClient: OpenVikingClientLike | null = null;
+  const getClient = async (): Promise<OpenVikingClientLike> => {
+    if (cachedClient == null) cachedClient = await ensureClient(connection);
+    return cachedClient;
+  };
+
+  const allTools = buildAllTools(getClient, peerId);
   const selected = toolNames ?? profileToolNames(profile, allowForget);
   return selected
     .filter((name): name is keyof typeof allTools => name in allTools)
@@ -383,8 +394,11 @@ export function createOpenvikingTools(
     });
 }
 
-function profileToolNames(profile: string, allowForget: boolean): string[] {
-  const retrieval = [
+export const OPENVIKING_PROFILES = ['agent', 'retrieval', 'admin'] as const;
+export type OpenvikingProfile = (typeof OPENVIKING_PROFILES)[number];
+
+function profileToolNames(profile: OpenvikingProfile, allowForget: boolean): OpenvikingToolName[] {
+  const retrieval: OpenvikingToolName[] = [
     'viking_find',
     'viking_search',
     'viking_browse',
@@ -393,7 +407,7 @@ function profileToolNames(profile: string, allowForget: boolean): string[] {
     'viking_archive_search',
     'viking_archive_expand',
   ];
-  let names: string[];
+  let names: OpenvikingToolName[];
   if (profile === 'retrieval') {
     names = [...retrieval, 'viking_health'];
   } else if (profile === 'admin') {
