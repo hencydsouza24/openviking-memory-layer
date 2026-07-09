@@ -108,6 +108,43 @@ export class OpenVikingRetriever extends BaseRetriever {
     return this.clientCache;
   }
 
+  /**
+   * Client-side scope re-check for `find`/`search` results.
+   *
+   * The OpenViking server is supposed to enforce per-user scoping itself
+   * (via `PathScope` filters threaded down to its native vector index), but
+   * that enforcement has been observed to fail at the compiled index-engine
+   * layer — results from other users' `viking://user/{their-id}/...` roots
+   * can come back even though every Python layer up to the native engine
+   * builds the correct restriction. We don't ship or control that server, so
+   * this SDK re-verifies each result's URI itself before turning it into a
+   * `Document`, rather than trusting the server's filter was actually applied.
+   *
+   * Returns the URI prefixes this retriever is allowed to surface, or `null`
+   * if we can't determine an owner (no `userId`/`user` set) — in that case
+   * filtering is skipped so callers with no identity aren't broken.
+   */
+  private resolveAllowedScopePrefixes(): string[] | null {
+    // Caller explicitly scoped the search — trust what they asked for.
+    if (this.targetUri) {
+      return Array.isArray(this.targetUri) ? this.targetUri.filter(Boolean) : [this.targetUri];
+    }
+    // Empty targetUri: mirrors the server's own default-scope fallback
+    // (default_target_directories -> [canonical_user_root(ctx), "viking://resources"]),
+    // reconstructed client-side from what we already know about this connection.
+    const userId = this.connection.userId ?? this.connection.user;
+    if (!userId) return null; // nothing to enforce against — skip filtering
+    return [`viking://user/${userId}`, 'viking://resources'];
+  }
+
+  private static isUnderAllowedPrefix(uri: string, prefixes: string[]): boolean {
+    const normalizedUri = uri.replace(/\/+$/, '');
+    return prefixes.some((prefix) => {
+      const normalizedPrefix = prefix.replace(/\/+$/, '');
+      return normalizedUri === normalizedPrefix || normalizedUri.startsWith(`${normalizedPrefix}/`);
+    });
+  }
+
   async _getRelevantDocuments(query: string): Promise<Document[]> {
     const client = await this.getClient();
     const method = this.searchMode === 'search' ? 'search' : 'find';
@@ -120,9 +157,14 @@ export class OpenVikingRetriever extends BaseRetriever {
       filter: this.filter,
     });
 
+    const allowedPrefixes = this.resolveAllowedScopePrefixes();
+
     const documents: Document[] = [];
     for (const [contextType, item] of iterResultItems(result, this.contextTypes)) {
       const uri = itemValue(item, 'uri', '');
+      if (allowedPrefixes && uri && !OpenVikingRetriever.isUnderAllowedPrefix(uri, allowedPrefixes)) {
+        continue; // server returned a result outside our own scope — drop it, don't trust it
+      }
       const content = await this.contentForItem(client, item);
       const p = this.metadataPrefix;
       const metadata: Record<string, unknown> = {
