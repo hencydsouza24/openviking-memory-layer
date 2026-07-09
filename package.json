@@ -1,6 +1,6 @@
 {
   "name": "@grubgenie/openviking-memory-layer",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "description": "OpenViking memory adapters for LangChain.js and LangGraph.js — retriever, store, agent tools, chat history, and context middleware.",
   "license": "AGPL-3.0",
   "author": "hencydsouza24",

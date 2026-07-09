@@ -77,7 +77,16 @@ export class OpenVikingStore extends BaseStore {
       path: params.path ?? null,
       autoInitialize: params.autoInitialize ?? true,
     };
-    this.rootUri = (params.rootUri ?? 'viking://user/memories/langgraph_store').replace(/\/+$/, '');
+    // 'viking://user/memories' is a literal alias token the OpenViking server
+    // exact-matches and rewrites to the caller's real per-user path
+    // (viking://user/{user_id}/memories) — see openviking core
+    // retrieval_targets.py's _is_default_user_content_root. Any extra path
+    // segment here (e.g. a past 'langgraph_store' suffix) breaks that
+    // exact-match and falls through to a single unscoped literal path shared
+    // by every caller. Keep this root bare; put app-specific distinctions in
+    // the `namespace` array passed to get/put/search instead — those segments
+    // are appended after aliasing resolves and don't affect the match.
+    this.rootUri = (params.rootUri ?? 'viking://user/memories').replace(/\/+$/, '');
     this.index = params.index ?? null;
     this.wait = params.wait ?? true;
     this.timeout = params.timeout ?? null;
