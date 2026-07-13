@@ -25,3 +25,5 @@ Two isolation models are supported:
 ## Related
 
 [Connection settings](connection.md), [OpenVikingRetriever module](../modules/retrievers.md), [OpenVikingStore module](../modules/store.md)
+
+**Upstream watch:** OpenViking v0.4.x (this deployment runs v0.3.24) introduces a User/Peer model that reassigns roughly what `userId` vs `actorPeerId` mean here — see the provisional research note [OpenViking 0.4.x User/Peer model vs. this repo's current identity model](../../research/openviking-0.4-user-peer-model-vs-current-implementation.md). Not scheduled; tracked for whenever the server version changes.

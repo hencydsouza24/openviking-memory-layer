@@ -78,6 +78,10 @@ See [Layered Design](architecture/layered-design.md) for the full breakdown.
 - [Adding a new viking_* tool](guides/adding-a-viking-tool.md)
 - [Wiring a LangGraph agent](guides/wiring-a-langgraph-agent.md)
 
+### Upstream watch
+
+- [OpenViking 0.4.x User/Peer model vs. this repo's current identity model](../research/openviking-0.4-user-peer-model-vs-current-implementation.md) — provisional research note; server is upgradable at will but the migration is deliberately deferred (no forcing function, existing bugs take priority). See [Identity and scoping](concepts/identity-and-scoping.md) for the concept it affects.
+
 ### Change log
 
 [wiki/log.md](log.md) — append-only audit trail of wiki generation/refresh runs.
