@@ -1,0 +1,10 @@
+---
+title: Wiki Log
+description: Append-only audit trail of wiki generation/refresh runs.
+---
+## 2026-07-13: generate
+
+- Profile: internal/exhaustive
+- source_commit: 86b96cb8 (initial generation, no prior)
+- Coverage: full `src/` (10 files) + architecture (layered design, connection/clients, data/index duality) + flows (full agent, session commit, context injection, store put/get/search) + concepts (connection, identity/scoping, commit policy, content mode, tool profiles, find vs search) + guides (testing without a server, adding a tool, wiring a LangGraph agent). Examples (`examples/`) and tests (`test/`) referenced from flows/guides but not given their own pages at this depth.
+- Pages: [Overview](./OVERVIEW.md), [Layered Design](./architecture/layered-design.md), [Connection and Clients](./architecture/connection-and-clients.md), [Data / Index Duality](./architecture/data-and-index-duality.md), [Package barrel](./modules/index.md), [Client Kernel](./modules/client.md), [SyncHTTPClient](./modules/http_client.md), [InMemoryOpenVikingClient](./modules/testing.md), [OpenVikingStore](./modules/store.md), [OpenVikingRetriever](./modules/retrievers.md), [createOpenvikingTools](./modules/tools.md), [OpenVikingChatMessageHistory](./modules/history.md), [Context Assembler](./modules/context.md), [OpenVikingContextMiddleware](./modules/middleware.md), [Full agent with store and tools](./flows/full-agent-with-store-and-tools.md), [Session commit and archival](./flows/session-commit-and-archival.md), [Context injection and history](./flows/context-injection-and-history.md), [Store put/get/search](./flows/store-put-get-search.md), [Connection settings](./concepts/connection.md), [Identity and scoping](./concepts/identity-and-scoping.md), [Commit policy](./concepts/commit-policy.md), [Content mode](./concepts/content-mode.md), [Tool profiles](./concepts/tool-profiles.md), [find vs search](./concepts/find-vs-search.md), [Testing without a server](./guides/testing-without-a-server.md), [Adding a viking tool](./guides/adding-a-viking-tool.md), [Wiring a LangGraph agent](./guides/wiring-a-langgraph-agent.md)
