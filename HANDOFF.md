@@ -6,6 +6,21 @@ Standalone, published npm package: a faithful **TypeScript port** of the Python
 can use OpenViking as a memory backend (retriever, store, agent tools, chat
 history, context middleware). Detached into its own GitHub repo.
 
+## Knowledge base
+A full codebase wiki now exists at `wiki/OVERVIEW.md` (OpenKnowledge, profile
+`internal/exhaustive`, stamped `source_commit: 86b96cb8c456de05da794ce36b59c95afed4db7d`).
+Covers architecture, one page per `src/*.ts` module, key flows (incl. failure modes),
+concepts, and guides. To refresh after further `src/` changes, re-invoke the `wiki`
+OK workflow — it diffs against the stamped commit and touches only affected pages,
+not a full regen.
+
+A provisional research note also exists comparing this package's identity model
+(`account`/`userId`/`actorPeerId`) against upstream OpenViking v0.4.1's new User/Peer
+model (the deployed server is on v0.3.24): `research/openviking-0.4-user-peer-model-vs-current-implementation.md`.
+**Decision: migration deliberately deferred** — 0.3.x stays fully supported, no forcing
+function, and there are small existing bugs in this repo to patch first. Read that note
+before re-litigating whether to upgrade; don't re-derive the comparison from scratch.
+
 ## Status: v0.2.1 published + live-verified; v0.2.2 (README) tagged, publish PENDING (OTP)
 - **npm**: latest PUBLISHED = `@grubgenie/openviking-memory-layer@0.2.1` (public, live, fully verified).
   **v0.2.2 is tagged + pushed but NOT yet published** — README-only change (expanded usage docs,
